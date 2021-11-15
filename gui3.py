@@ -324,6 +324,10 @@ class Ui_MainWindow(object):
         self.vtkWidget_all.GetRenderWindow().AddRenderer(self.ren_all)
         self.iren_all = self.vtkWidget_all.GetRenderWindow().GetInteractor()
 
+        self.bone_1 = np.zeros((180, 180, 180))
+        self.bone_2 = np.zeros((180, 180, 180))
+        self.bone_3 = np.zeros((180, 180, 180))
+
 
 
         self.Load1BTN.clicked.connect(self.load1bone)
@@ -344,7 +348,7 @@ class Ui_MainWindow(object):
         self.PNG_Reader_1 = vtk.vtkPNGReader()
         self.PNG_Reader_1.SetNumberOfScalarComponents(1)
         self.PNG_Reader_1.SetFileDimensionality(3)
-        self.PNG_Reader_1.SetDataExtent(0, 180, 0, 180, 0, 60)
+        self.PNG_Reader_1.SetDataExtent(0, 180, 0, 180, 0, 179)
         self.PNG_Reader_1.SetFilePrefix(self.filefolder_1+'/')
         self.PNG_Reader_1.SetFilePattern("%s%d.png")
         self.PNG_Reader_1.Update()
@@ -393,7 +397,7 @@ class Ui_MainWindow(object):
         self.PNG_Reader_2 = vtk.vtkPNGReader()
         self.PNG_Reader_2.SetNumberOfScalarComponents(1)
         self.PNG_Reader_2.SetFileDimensionality(3)
-        self.PNG_Reader_2.SetDataExtent(0, 180, 0, 180, 0, 60)
+        self.PNG_Reader_2.SetDataExtent(0, 180, 0, 180, 0, 179)
         self.PNG_Reader_2.SetFilePrefix(self.filefolder_2+'/')
         self.PNG_Reader_2.SetFilePattern("%s%d.png")
         self.PNG_Reader_2.Update()
@@ -442,7 +446,7 @@ class Ui_MainWindow(object):
         self.PNG_Reader_3 = vtk.vtkPNGReader()
         self.PNG_Reader_3.SetNumberOfScalarComponents(1)
         self.PNG_Reader_3.SetFileDimensionality(3)
-        self.PNG_Reader_3.SetDataExtent(0, 180, 0, 180, 0, 60)
+        self.PNG_Reader_3.SetDataExtent(0, 180, 0, 180, 0, 179)
         self.PNG_Reader_3.SetFilePrefix(self.filefolder_3+'/')
         self.PNG_Reader_3.SetFilePattern("%s%d.png")
         self.PNG_Reader_3.Update()
@@ -484,6 +488,7 @@ class Ui_MainWindow(object):
         self.ren_1.RemoveAllViewProps()
         self.ren_2.RemoveAllViewProps()
         self.ren_3.RemoveAllViewProps()
+        self.ren_all.RemoveAllViewProps()
 
         self.update_PNG_contour_1 = vtk.vtkDiscreteMarchingCubes()
         self.update_PNG_contour_1.SetInputConnection(self.PNG_Reader_1.GetOutputPort())
@@ -613,39 +618,149 @@ class Ui_MainWindow(object):
         self.iren_3.Initialize()
         self.iren_3.Start()
 
+        print('--------ok--------1')
+        self.volumearray_1 = self.pngtopoint(self.filefolder_1)
+        self.volumearray_2 = self.pngtopoint(self.filefolder_2)
+        self.volumearray_3 = self.pngtopoint(self.filefolder_3)
+        print('--------ok--------11')
+        self.PCsourcedata_1 = self.volumearray_1
+        self.PCpoints_1 = vtk.vtkPoints()
+        self.PCpoints_1.SetData(numpy_to_vtk(self.PCsourcedata_1))
+        PCpolydata_1 = vtk.vtkPolyData()
+        PCpolydata_1.SetPoints(self.PCpoints_1)
+        PCvertex_1 = vtk.vtkPolyDataPointSampler()
+        PCvertex_1.SetInputData(PCpolydata_1)
+        PCtransform_1 = vtk.vtkTransform()
+        print('--------ok--------12')
+        PCtransform_1.RotateWXYZ(self.rotZ_1.value(), 1, 0, 0)
+        PCtransform_1.RotateWXYZ(self.rotY_1.value(), 0, 1, 0)
+        PCtransform_1.RotateWXYZ(self.rotX_1.value(), 0, 0, 1)
+        print('--------ok--------13')
+        PCtransformFilter_1 = vtk.vtkTransformPolyDataFilter()
+        PCtransformFilter_1.SetInputConnection(PCvertex_1.GetOutputPort())
+        PCtransformFilter_1.SetTransform(PCtransform_1)
+        PCtransformFilter_1.Update()
+        print('--------ok--------14')
+        vtkarray_1 = PCtransformFilter_1.GetOutput().GetPoints().GetData()
+        nparray_1 = vtk_to_numpy(vtkarray_1)
+        maskvol_1 = nparray_1.astype(int)
+        print('--------ok--------15')
+        maskvol_1[..., 0] += 180
+        maskvol_1[..., 1] += 180
+        maskvol_1[..., 2] += 180
+        masktemp_1 = np.zeros((360, 360, 360))
+        print('--------ok--------16')
+        a = masktemp_1 > 0
+        b = masktemp_1 < 360
+        c = a * b
+        d = c[:, 0] * c[:, 1] * c[:, 2]
+        dex = np.argwhere(d == False)
+        maskvol_1 = np.delete(maskvol_1, dex, axis=0)
+        print('--------ok--------17')
+        maskvol_1[maskvol_1[:, 0], maskvol_1[:, 1], maskvol_1[:, 2]] = 255
 
-        filefolder_1 = os.listdir(self.filefolder_1)
-        filefolder_1.sort(key=lambda x: int(x.split('.png')[0]))
-        self.volumearray_1 = np.zeros((61, 180, 180))
-        for i, x in enumerate(filefolder_1):
-            img = cv2.imread(os.path.join(self.filefolder_1, x), 0)
-            self.volumearray_1[i] = img
+        print('--------ok--------2')
+        self.PCsourcedata_2 = self.volumearray_2
+        self.PCpoints_2 = vtk.vtkPoints()
+        self.PCpoints_2.SetData(numpy_to_vtk(self.PCsourcedata_2))
+        PCpolydata_2 = vtk.vtkPolyData()
+        PCpolydata_2.SetPoints(self.PCpoints_2)
+        PCvertex_2 = vtk.vtkPolyDataPointSampler()
+        PCvertex_2.SetInputData(PCpolydata_2)
+        PCtransform_2 = vtk.vtkTransform()
 
-        filefolder_2 = os.listdir(self.filefolder_2)
-        filefolder_2.sort(key=lambda x: int(x.split('.png')[0]))
-        self.volumearray_2 = np.zeros((61, 180, 180))
-        for i, x in enumerate(filefolder_2):
-            img = cv2.imread(os.path.join(self.filefolder_2, x), 0)
-            self.volumearray_2[i] = img
+        PCtransform_2.RotateWXYZ(self.rotZ_2.value(), 1, 0, 0)
+        PCtransform_2.RotateWXYZ(self.rotY_2.value(), 0, 1, 0)
+        PCtransform_2.RotateWXYZ(self.rotX_2.value(), 0, 0, 1)
 
-        filefolder_3 = os.listdir(self.filefolder_3)
-        filefolder_3.sort(key=lambda x: int(x.split('.png')[0]))
-        self.volumearray_3 = np.zeros((61, 180, 180))
-        for i, x in enumerate(filefolder_3):
-            img = cv2.imread(os.path.join(self.filefolder_3, x), 0)
-            self.volumearray_3[i] = img
+        print('--------ok--------3')
+        PCtransformFilter_2 = vtk.vtkTransformPolyDataFilter()
+        PCtransformFilter_2.SetInputConnection(PCvertex_2.GetOutputPort())
+        PCtransformFilter_2.SetTransform(PCtransform_2)
+        PCtransformFilter_2.Update()
+
+        vtkarray_2 = PCtransformFilter_2.GetOutput().GetPoints().GetData()
+        nparray_2 = vtk_to_numpy(vtkarray_2)
+        maskvol_2 = nparray_2.astype(int)
+        maskvol_2[..., 0] += 180
+        maskvol_2[..., 1] += 180
+        maskvol_2[..., 2] += 180
+        masktemp_2 = np.zeros((360, 360, 360))
+        a = masktemp_2 > 0
+        b = masktemp_2 < 360
+        c = a * b
+        d = c[:, 0] * c[:, 1] * c[:, 2]
+        dex = np.argwhere(d == False)
+        maskvol_2 = np.delete(maskvol_2, dex, axis=0)
+        maskvol_2[maskvol_2[:, 0], maskvol_2[:, 1], maskvol_2[:, 2]] = 255
+
+
+        self.PCsourcedata_3 = self.volumearray_3
+        self.PCpoints_3 = vtk.vtkPoints()
+        self.PCpoints_3.SetData(numpy_to_vtk(self.PCsourcedata_3))
+        PCpolydata_3 = vtk.vtkPolyData()
+        PCpolydata_3.SetPoints(self.PCpoints_3)
+        PCvertex_3 = vtk.vtkPolyDataPointSampler()
+        PCvertex_3.SetInputData(PCpolydata_3)
+        PCtransform_3 = vtk.vtkTransform()
+
+        PCtransform_3.RotateWXYZ(self.rotZ_3.value(), 1, 0, 0)
+        PCtransform_3.RotateWXYZ(self.rotY_3.value(), 0, 1, 0)
+        PCtransform_3.RotateWXYZ(self.rotX_3.value(), 0, 0, 1)
+
+        print('--------ok--------4')
+        PCtransformFilter_3 = vtk.vtkTransformPolyDataFilter()
+        PCtransformFilter_3.SetInputConnection(PCvertex_3.GetOutputPort())
+        PCtransformFilter_3.SetTransform(PCtransform_3)
+        PCtransformFilter_3.Update()
+
+        vtkarray_3 = PCtransformFilter_3.GetOutput().GetPoints().GetData()
+        nparray_3 = vtk_to_numpy(vtkarray_3)
+        maskvol_3 = nparray_3.astype(int)
+        maskvol_3[..., 0] += 180
+        maskvol_3[..., 1] += 180
+        maskvol_3[..., 2] += 180
+        masktemp_3 = np.zeros((360, 360, 360))
+        a = masktemp_3 > 0
+        b = masktemp_3 < 360
+        c = a * b
+        d = c[:, 0] * c[:, 1] * c[:, 2]
+        dex = np.argwhere(d == False)
+        maskvol_3 = np.delete(maskvol_3, dex, axis=0)
+        maskvol_3[maskvol_3[:, 0], maskvol_3[:, 1], maskvol_3[:, 2]] = 255
+
+        print('--------ok--------5')
+
+        for x, i in enumerate(range(0, maskvol_1.shape[0], 2)):
+            img = maskvol_1[i]
+            img = img.astype(np.uint8)
+            img = cv2.resize(img, (180,180))
+            img = np.where(img>1,255, 0)
+            self.bone_1[x] = img
+        for x, i in enumerate(range(0, maskvol_2.shape[0], 2)):
+            img = maskvol_2[i]
+            img = img.astype(np.uint8)
+            img = cv2.resize(img, (180,180))
+            img = np.where(img>1,255, 0)
+            self.bone_2[x] = img
+        for x, i in enumerate(range(0, maskvol_3.shape[0], 2)):
+            img = maskvol_3[i]
+            img = img.astype(np.uint8)
+            img = cv2.resize(img, (180,180))
+            img = np.where(img>1,255, 0)
+            self.bone_3[x] = img
+
 
         self.allvolume = np.zeros((180, 180, 180))
-        self.allvolume[21:82] += self.volumearray_1
-        self.allvolume[60:121] += self.volumearray_2
-        self.allvolume[99:160] += self.volumearray_3
+        self.allvolume[21:81] += self.bone_1[65:116]
+        self.allvolume[60:120] += self.bone_2[65:116]
+        self.allvolume[99:159] += self.bone_3[65:116]
         self.allvolume = np.where(self.allvolume>128, 255, 0)
         self.allvolume = self.allvolume.astype(np.uint8)
 
         for i in range(self.allvolume.shape[0]):
             temp = self.allvolume[i]
             cv2.imwrite(os.path.join('./temp_simulation', str(i)+'.png'), temp)
-
 
         self.PNG_Reader_all = vtk.vtkPNGReader()
         self.PNG_Reader_all.SetNumberOfScalarComponents(1)
@@ -687,6 +802,44 @@ class Ui_MainWindow(object):
         self.ren_all.ResetCamera()
         self.iren_all.Initialize()
         self.iren_all.Start()
+
+
+        self.PC_source_data = temp
+        # 新建 vtkPoints 实例
+        self.PC_points = vtk.vtkPoints()
+        # 导入点数据
+        self.PC_points.SetData(numpy_to_vtk(self.PC_source_data))
+
+
+
+
+
+
+
+    def pngtopoint(self, filepath):
+        file_folder = os.listdir(filepath)
+        file_folder.sort(key=lambda x: int(x.split('.png')[0]))
+        maskvolume_array = np.zeros((180, 180, 180))
+        for i, x in enumerate(file_folder):
+            img = cv2.imread(os.path.join(filepath, x), 0)
+            maskvolume_array[i] = img
+
+        img_tensor = torch.from_numpy(maskvolume_array)
+        img_tensor = img_tensor.unsqueeze(0)
+        img_tensor = img_tensor.unsqueeze(0)
+        img_interporlate_tensor = F.interpolate(img_tensor, scale_factor=2, mode='nearest')
+        img_interporlate_tensor = img_interporlate_tensor.squeeze(0)
+        img_interporlate_tensor = img_interporlate_tensor.squeeze(0)
+        img_interporlate_array = img_interporlate_tensor.numpy()
+        index = np.argwhere(img_interporlate_array == 255)
+
+        temp = np.zeros(index.shape)
+        temp[..., 0] = index[..., 0]-180
+        temp[..., 1] = index[..., 1]-180
+        temp[..., 2] = index[..., 2]-180
+        return temp
+
+
 
 
 
